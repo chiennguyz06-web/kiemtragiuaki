@@ -1,0 +1,77 @@
+<p style="white-space: pre-line;">
+  Lý thuyết JavaScript
+1. JavaScript là gì? Dùng để làm gì trong thiết kế web?
+JavaScript (JS) là ngôn ngữ lập trình bậc cao, thông dịch (interpreted), động, được chạy trực tiếp trên trình duyệt (và cả trên server nhờ Node.js). Nó cùng với HTML và CSS tạo thành bộ ba nền tảng của web:
+•	HTML: cấu trúc, nội dung trang
+•	CSS: giao diện, hiển thị
+•	JavaScript: hành vi, tương tác
+Vai trò trong thiết kế web:
+•	Thao tác DOM: thay đổi nội dung, style, cấu trúc trang mà không cần tải lại.
+•	Xử lý sự kiện: click, nhập liệu, cuộn trang, di chuột...
+•	Kiểm tra dữ liệu form (validation) phía client.
+•	Gửi/nhận dữ liệu bất đồng bộ với server (AJAX, fetch, API).
+•	Tạo hiệu ứng, animation, slider, menu động, biểu đồ.
+•	Xây dựng ứng dụng web hoàn chỉnh (React, Vue, Angular), ứng dụng server 2. Các kiểu dữ liệu chính trong JavaScript
+Kiểu nguyên thủy (primitive) gồm 7 loại:
+Kiểu	Ví dụ	Ghi chú
+string	"Hello"	Chuỗi ký tự
+number	42, 3.14, NaN, Infinity	Số nguyên và số thực
+bigint	123n	Số nguyên rất lớn
+boolean	true, false	Giá trị logic
+undefined	undefined	Biến đã khai báo nhưng chưa gán giá trị
+null	null	Giá trị rỗng, gán có chủ đích
+symbol	Symbol("id")	Định danh duy nhất
+
+Kiểu tham chiếu (reference):
+•	object (bao gồm Array, Function, Date, Map, Set...)
+js
+typeof "abc"      // "string"
+typeof 10         // "number"
+typeof null       // "object" (lỗi lịch sử của JS)
+typeof [1,2]      // "object"
+typeof function(){} // "function"
+________________________________________
+3. Khác biệt giữa var, let, const
+Tiêu chí	var	let	const
+Phạm vi (scope)	Function scope	Block scope	Block scope
+Khai báo lại cùng tên	Được	Không	Không
+Gán lại giá trị	Được	Được	Không
+Hoisting	Có, khởi tạo undefined	Có, nhưng ở "temporal dead zone" (báo lỗi nếu dùng trước khai báo)	Giống let
+Bắt buộc gán giá trị khi khai báo	Không	Không	Có
+js
+if (true) {
+  var a = 1;
+  let b = 2;
+}
+console.log(a); // 1
+console.log(b); // ReferenceError
+
+const c = 10;
+c = 20;         // TypeError
+
+const obj = { x: 1 };
+obj.x = 2;      // Hợp lệ: const chỉ cấm gán lại tham chiếu, không cấm sửa nội dung object
+Khuyến nghị: ưu tiên const, dùng let khi cần gán lại, tránh var.
+________________________________________
+4. JavaScript có phải ngôn ngữ đơn luồng không?
+Có. JavaScript là ngôn ngữ đơn luồng (single-threaded): tại một thời điểm, engine chỉ thực thi một tác vụ trên một call stack.
+Tuy vậy, JS vẫn xử lý được tác vụ bất đồng bộ (timer, gọi API, đọc file) nhờ Event Loop:
+1.	Tác vụ bất đồng bộ được giao cho môi trường bên ngoài (Web APIs của trình duyệt hoặc libuv của Node.js).
+2.	Khi hoàn thành, callback được đưa vào hàng đợi (callback queue / microtask queue).
+3.	Event Loop chỉ đẩy callback vào call stack khi stack đang rỗng.
+Nhờ đó JS không bị "treo" khi chờ tác vụ chậm. Nếu cần chạy song song thật sự, có thể dùng Web Workers.
+js
+console.log("1");
+setTimeout(() => console.log("2"), 0);
+console.log("3");
+// Kết quả: 1, 3, 2
+________________________________________
+5. Toán tử delete có tác dụng gì?
+
+Tác dụng: xóa một thuộc tính khỏi object. Trả về true nếu xóa thành công (hoặc thuộc tính không tồn tại), false nếu không xóa được (thuộc tính non-configurable; ở strict mode sẽ ném TypeError).
+js
+const user = { name: "An", age: 20 };
+delete user.age;
+console.log(user); // { name: "An" }
+
+</p>

@@ -1,0 +1,189 @@
+ <!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Hứng táo</title>
+<style>
+:root {
+  --bg: #f4f1ea; --text: #2b2b2b; --muted: #6b6b6b; --btn: #2e7d32; --btn-text: #ffffff;
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --bg: #1c1d1f; --text: #ececec; --muted: #a0a0a0; --btn: #43a047; color-scheme: dark; }
+}
+:root[data-theme="dark"] { --bg: #1c1d1f; --text: #ececec; --muted: #a0a0a0; --btn: #43a047; color-scheme: dark; }
+html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+body { margin: 0; background: var(--bg); color: var(--text); font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+.wrap { max-width: 100%; overflow-x: auto; padding: 24px 16px; display: flex; flex-direction: column; align-items: center; }
+h1 { margin: 0 0 12px; font-size: 1.5rem; }
+#hud { width: 500px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 1.1rem; font-weight: 600; }
+#game-container {
+  width: 500px; height: 400px; flex: none;
+  border: 3px solid #8d6e63; border-radius: 14px;
+  background: linear-gradient(#e3f4ff, #f9fcff);
+  position: relative; overflow: hidden;
+}
+#basket {
+  position: absolute; bottom: 0; left: 210px; width: 80px; height: 22px;
+  background: #8b5a2b; border-radius: 4px 4px 14px 14px; border-top: 4px solid #5d3a1a;
+}
+#apple {
+  position: absolute; top: 0; left: 235px; width: 30px; height: 30px;
+  font-size: 26px; line-height: 30px; text-align: center; user-select: none;
+}
+#overlay {
+  position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  background: rgba(0,0,0,.45); color: #fff; text-align: center; gap: 6px;
+}
+#overlay.hidden { display: none; }
+#overlay h2 { margin: 0; font-size: 2.2rem; }
+#overlay p { margin: 0 0 8px; }
+button#start-btn {
+  margin-top: 14px; padding: 10px 28px; font-size: 1rem; font-weight: 600; cursor: pointer;
+  background: var(--btn); color: var(--btn-text); border: none; border-radius: 8px;
+}
+button#start-btn:hover { filter: brightness(1.1); }
+.hint { color: var(--muted); font-size: .9rem; margin-top: 10px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🍎 Hứng táo</h1>
+  <div id="hud">
+    <span>Điểm: <span id="score">0</span></span>
+    <button id="start-btn" type="button" style="margin:0;padding:6px 18px">Bắt đầu</button>
+    <span>Mạng: <span id="lives">3</span></span>
+  </div>
+  <div id="game-container">
+    <div id="apple">🍎</div>
+    <div id="basket"></div>
+    <div id="overlay">
+      <h2 id="overlay-title">Hứng táo</h2>
+      <p id="overlay-text">Dùng phím ← → để di chuyển giỏ.<br>Nhấn “Bắt đầu” để chơi.</p>
+    </div>
+  </div>
+  <div class="hint">Phím mũi tên Trái / Phải để di chuyển giỏ</div>
+</div>
+
+<script>
+(function () {
+  var W = 500, H = 400;
+  var container = document.getElementById("game-container");
+  var basket = document.getElementById("basket");
+  var apple = document.getElementById("apple");
+  var scoreEl = document.getElementById("score");
+  var livesEl = document.getElementById("lives");
+  var startBtn = document.getElementById("start-btn");
+  var overlay = document.getElementById("overlay");
+  var overlayTitle = document.getElementById("overlay-title");
+  var overlayText = document.getElementById("overlay-text");
+
+  var BASKET_W = basket.offsetWidth, BASKET_H = basket.offsetHeight;
+  var APPLE_SIZE = 30;
+  var BASKET_SPEED = 420;   // px/giây
+  var START_FALL = 150;     // px/giây
+  var SPEED_UP = 12;        // tăng nhẹ mỗi lần hứng được
+
+  var score, lives, fallSpeed, basketX, appleX, appleY, running = false, rafId = null, last = 0;
+  var keys = { left: false, right: false };
+
+  function randomAppleX() { return Math.random() * (W - APPLE_SIZE - 6) + 3; }
+
+  function respawn() {
+    appleX = randomAppleX();
+    appleY = -APPLE_SIZE;
+    render();
+  }
+
+  function render() {
+    basket.style.left = basketX + "px";
+    apple.style.left = appleX + "px";
+    apple.style.top = appleY + "px";
+  }
+
+  function updateHud() {
+    scoreEl.textContent = score;
+    livesEl.textContent = lives;
+  }
+
+  function collides() {
+    var basketTop = H - BASKET_H;
+    var appleBottom = appleY + APPLE_SIZE;
+    var overlapX = appleX + APPLE_SIZE > basketX && appleX < basketX + BASKET_W;
+    return overlapX && appleBottom >= basketTop && appleY < H;
+  }
+
+  function loop(ts) {
+    if (!running) return;
+    var dt = Math.min((ts - last) / 1000, 0.05);
+    last = ts;
+
+    // Di chuyển giỏ, giữ trong khung
+    if (keys.left) basketX -= BASKET_SPEED * dt;
+    if (keys.right) basketX += BASKET_SPEED * dt;
+    basketX = Math.max(0, Math.min(W - BASKET_W, basketX));
+
+    // Táo rơi theo trục tung (top)
+    appleY += fallSpeed * dt;
+
+    if (collides()) {
+      score += 1;
+      fallSpeed += SPEED_UP;
+      updateHud();
+      respawn();
+    } else if (appleY >= H) {
+      lives -= 1;
+      updateHud();
+      if (lives <= 0) { gameOver(); return; }
+      respawn();
+    }
+    render();
+    rafId = requestAnimationFrame(loop);
+  }
+
+  function gameOver() {
+    running = false;
+    cancelAnimationFrame(rafId);
+    overlayTitle.textContent = "Game Over";
+    overlayText.innerHTML = "Điểm của bạn: <b>" + score + "</b>";
+    overlay.classList.remove("hidden");
+    startBtn.textContent = "Chơi lại";
+  }
+
+  function startGame() {
+    cancelAnimationFrame(rafId);
+    score = 0; lives = 3; fallSpeed = START_FALL;
+    basketX = (W - BASKET_W) / 2;
+    keys.left = keys.right = false;
+    updateHud();
+    respawn();
+    overlay.classList.add("hidden");
+    startBtn.textContent = "Chơi lại";
+    startBtn.blur();
+    running = true;
+    last = performance.now();
+    rafId = requestAnimationFrame(loop);
+  }
+
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "ArrowLeft") { keys.left = true; e.preventDefault(); }
+    else if (e.key === "ArrowRight") { keys.right = true; e.preventDefault(); }
+  });
+  document.addEventListener("keyup", function (e) {
+    if (e.key === "ArrowLeft") keys.left = false;
+    else if (e.key === "ArrowRight") keys.right = false;
+  });
+
+  startBtn.addEventListener("click", startGame);
+
+  // Trạng thái ban đầu
+  score = 0; lives = 3; basketX = (W - BASKET_W) / 2; appleX = randomAppleX(); appleY = 20;
+  updateHud(); render();
+})();
+</script>
+</body>
+</html>

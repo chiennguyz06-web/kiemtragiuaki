@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dụng cụ pha cà phê</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;700&display=swap">
+<style>
+  :root {
+    --bg: #f4f6f5; --surface: #ffffff; --ink: #18272b; --muted: #5b6b6f;
+    --line: #d8dfdd; --accent: #0f5c5a; --accent-ink: #ffffff; --mark: #ffe58a;
+    --danger-bg: #fdecea; --danger-ink: #8a1c13;
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #101a1c; --surface: #172326; --ink: #e8f0ee; --muted: #9db0b0;
+      --line: #2b3d40; --accent: #5cc4bd; --accent-ink: #08201f; --mark: #6b5a12;
+      --danger-bg: #3a1a17; --danger-ink: #ffb4a9;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #101a1c; --surface: #172326; --ink: #e8f0ee; --muted: #9db0b0;
+    --line: #2b3d40; --accent: #5cc4bd; --accent-ink: #08201f; --mark: #6b5a12;
+    --danger-bg: #3a1a17; --danger-ink: #ffb4a9;
+  }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+  *, *::before, *::after { box-sizing: inherit; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: "Be Vietnam Pro", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    line-height: 1.55;
+  }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 32px 20px 56px; }
+  h1 { font-size: clamp(1.6rem, 4vw, 2.4rem); line-height: 1.15; margin: 0 0 6px; letter-spacing: -0.01em; }
+  .lead { color: var(--muted); margin: 0 0 24px; max-width: 60ch; }
+
+  .search { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 8px; }
+  .search input {
+    flex: 1 1 260px; min-width: 0; font: inherit; color: var(--ink);
+    background: var(--surface); border: 1.5px solid var(--line); border-radius: 10px;
+    padding: 12px 14px;
+  }
+  .search input:focus-visible, .search button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+  .search button {
+    font: inherit; font-weight: 500; cursor: pointer; color: var(--accent-ink);
+    background: var(--accent); border: 0; border-radius: 10px; padding: 12px 18px;
+  }
+  .count { color: var(--muted); font-size: 0.9rem; margin: 0 0 20px; min-height: 1.4em; }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 16px; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; }
+  .thumb {
+    aspect-ratio: 16 / 9; display: grid; place-items: center;
+    font-size: 2.4rem; font-weight: 700; color: var(--accent-ink); background: var(--accent);
+  }
+  .body { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 4px; flex: 1; }
+  .cat { color: var(--muted); font-size: 0.85rem; }
+  .name { font-size: 1.05rem; font-weight: 700; margin: 0; }
+  .desc { color: var(--muted); font-size: 0.92rem; margin: 0 0 8px; }
+  .price { margin-top: auto; font-weight: 700; color: var(--accent); }
+  mark { background: var(--mark); color: inherit; border-radius: 3px; padding: 0 1px; }
+
+  .error {
+    background: var(--danger-bg); color: var(--danger-ink); border-radius: 12px;
+    padding: 18px 20px; font-weight: 500;
+  }
+  .error small { display: block; font-weight: 400; margin-top: 4px; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main class="wrap">
+  <h1>Dụng cụ pha cà phê</h1>
+  <p class="lead">Gõ tên sản phẩm để lọc danh sách. Tìm kiếm không phân biệt hoa thường và có thể bỏ dấu tiếng Việt.</p>
+
+  <div class="search" role="search">
+    <input id="q" type="search" maxlength="60" autocomplete="off"
+           placeholder="Ví dụ: phin, ly, cân…" aria-label="Tìm theo tên sản phẩm">
+    <button id="clear" type="button">Xóa tìm kiếm</button>
+  </div>
+  <p id="count" class="count" aria-live="polite"></p>
+
+  <div id="list" class="grid"></div>
+  <div id="error" class="error" role="alert" hidden></div>
+</main>
+
+<script>
+(function () {
+  "use strict";
+
+  // 1. Dữ liệu: mảng sản phẩm
+  var products = [
+    { id: 1, name: "Phin nhôm 120ml", category: "Dụng cụ pha", price: 85000, desc: "Phin truyền thống, nhẹ và bền." },
+    { id: 2, name: "Ly thủy tinh Espresso", category: "Ly tách", price: 120000, desc: "Thủy tinh chịu nhiệt, dung tích 80ml." },
+    { id: 3, name: "Cân điện tử pha cà phê", category: "Thiết bị", price: 490000, desc: "Đo chính xác 0,1g, có đếm thời gian." },
+    { id: 4, name: "Bình cổ ngỗng 600ml", category: "Dụng cụ pha", price: 650000, desc: "Rót nước đều tay cho pour-over." },
+    { id: 5, name: "Máy xay cà phê tay", category: "Thiết bị", price: 780000, desc: "Lưỡi xay thép, chỉnh được 15 mức độ." },
+    { id: 6, name: "Giấy lọc V60 (100 tờ)", category: "Phụ kiện", price: 95000, desc: "Giấy lọc không tẩy trắng." }
+  ];
+
+  // 2. Chuẩn hóa chuỗi: bỏ dấu, đ → d, chữ thường
+  function fold(s) {
+    return s.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+            .replace(/đ/g, "d").replace(/Đ/g, "D").toLowerCase();
+  }
+
+  // Tính trước khóa tìm kiếm một lần, không tính lại ở mỗi lần gõ
+  products.forEach(function (p) { p.key = fold(p.name); });
+
+  var money = new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" });
+  var $q = document.getElementById("q");
+  var $list = document.getElementById("list");
+  var $error = document.getElementById("error");
+  var $count = document.getElementById("count");
+
+  // 3. Làm sạch input: gom khoảng trắng, cắt đầu cuối, giới hạn độ dài
+  function cleanQuery(raw) {
+    return fold(raw.replace(/\s+/g, " ").trim()).slice(0, 60);
+  }
+
+  // 4. Đánh dấu phần khớp bằng DOM node (không dùng innerHTML)
+  function highlight(el, text, q) {
+    el.textContent = "";
+    if (!q) { el.textContent = text; return; }
+    var folded = "", map = [];
+    Array.from(text).forEach(function (ch, i) {
+      var f = fold(ch);
+      for (var k = 0; k < f.length; k++) { folded += f[k]; map.push(i); }
+    });
+    var chars = Array.from(text);
+    var at = folded.indexOf(q);
+    if (at === -1) { el.textContent = text; return; }
+    var start = map[at], end = map[at + q.length - 1] + 1;
+    el.appendChild(document.createTextNode(chars.slice(0, start).join("")));
+    var m = document.createElement("mark");
+    m.textContent = chars.slice(start, end).join("");
+    el.appendChild(m);
+    el.appendChild(document.createTextNode(chars.slice(end).join("")));
+  }
+
+  function makeCard(p, q) {
+    var card = document.createElement("article");
+    card.className = "card";
+
+    var thumb = document.createElement("div");
+    thumb.className = "thumb";
+    thumb.setAttribute("aria-hidden", "true");
+    thumb.textContent = p.name.charAt(0);
+
+    var body = document.createElement("div");
+    body.className = "body";
+
+    var cat = document.createElement("span");
+    cat.className = "cat";
+    cat.textContent = p.category;
+
+    var name = document.createElement("h2");
+    name.className = "name";
+    highlight(name, p.name, q);
+
+    var desc = document.createElement("p");
+    desc.className = "desc";
+    desc.textContent = p.desc;
+
+    var price = document.createElement("span");
+    price.className = "price";
+    price.textContent = money.format(p.price);
+
+    body.append(cat, name, desc, price);
+    card.append(thumb, body);
+    return card;
+  }
+
+  function render() {
+    var raw = $q.value;
+    var q = cleanQuery(raw);
+    var found = q ? products.filter(function (p) { return p.key.indexOf(q) !== -1; }) : products;
+
+    $list.textContent = "";
+    found.forEach(function (p) { $list.appendChild(makeCard(p, q)); });
+
+    if (found.length === 0) {
+      $error.textContent = "";
+      var msg = document.createElement("span");
+      // textContent: nội dung người dùng nhập luôn được coi là văn bản thuần
+      msg.textContent = "Không tìm thấy sản phẩm nào cho “" + raw.trim().slice(0, 60) + "”.";
+      var tip = document.createElement("small");
+      tip.textContent = "Hãy kiểm tra chính tả hoặc thử từ khóa ngắn hơn.";
+      $error.append(msg, tip);
+      $error.hidden = false;
+      $count.textContent = "";
+    } else {
+      $error.hidden = true;
+      $count.textContent = q
+        ? "Tìm thấy " + found.length + " / " + products.length + " sản phẩm"
+        : "Hiển thị tất cả " + products.length + " sản phẩm";
+    }
+  }
+
+  // 5. Debounce: chỉ lọc khi người dùng ngừng gõ khoảng 150ms
+  var timer;
+  $q.addEventListener("input", function () {
+    clearTimeout(timer);
+    timer = setTimeout(render, 150);
+  });
+  document.getElementById("clear").addEventListener("click", function () {
+    $q.value = "";
+    render();
+    $q.focus();
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>

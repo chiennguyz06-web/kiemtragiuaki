@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Đăng ký tài khoản</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#eef1f4; --card:#ffffff; --ink:#1b2733; --muted:#5b6b7a; --line:#cfd8e0;
+  --accent:#0f6b63; --accent-ink:#ffffff; --err:#b3261e; --ok:#0f6b63; --okbg:#e3f3f0;
+  color-scheme: light;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#10171d; --card:#18222b; --ink:#e8eef3; --muted:#9aabb9; --line:#2f3e4b;
+    --accent:#4fc3b7; --accent-ink:#06211e; --err:#ff8a80; --ok:#4fc3b7; --okbg:#143330;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#10171d; --card:#18222b; --ink:#e8eef3; --muted:#9aabb9; --line:#2f3e4b;
+  --accent:#4fc3b7; --accent-ink:#06211e; --err:#ff8a80; --ok:#4fc3b7; --okbg:#143330;
+  color-scheme: dark;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:var(--bg);color:var(--ink);
+  font-family:"Be Vietnam Pro",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  line-height:1.5;display:grid;place-items:center;padding:clamp(12px,4vw,40px)}
+.wrap{width:100%;max-width:880px;display:grid;grid-template-columns:1fr;
+  background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.side{padding:28px;background:var(--accent);color:var(--accent-ink)}
+.side h1{margin:0 0 8px;font-size:1.6rem;line-height:1.2}
+.side p{margin:0 0 20px;opacity:.9}
+.rules{list-style:none;margin:0;padding:0;display:grid;gap:8px;font-size:.95rem}
+.rules li{display:flex;gap:10px;align-items:center;opacity:.65;transition:opacity .2s}
+.rules li::before{content:"";width:16px;height:16px;border-radius:50%;border:2px solid currentColor;flex:none}
+.rules li.ok{opacity:1;font-weight:500}
+.rules li.ok::before{background:currentColor;box-shadow:inset 0 0 0 3px var(--accent)}
+form{padding:28px;display:grid;gap:18px}
+.field{display:grid;gap:6px}
+label{font-weight:500}
+input[type=text],input[type=email],input[type=password]{
+  width:100%;padding:12px 14px;font:inherit;color:inherit;background:transparent;
+  border:1.5px solid var(--line);border-radius:8px}
+input:focus-visible,button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.field.invalid input{border-color:var(--err)}
+.error{min-height:1.2em;margin:0;font-size:.875rem;color:var(--err)}
+.pw{position:relative}
+.pw button{position:absolute;right:6px;top:50%;transform:translateY(-50%);
+  background:none;border:0;color:var(--muted);font:inherit;font-size:.85rem;padding:8px;cursor:pointer}
+.check{display:flex;gap:10px;align-items:flex-start}
+.check input{width:20px;height:20px;margin-top:2px;accent-color:var(--accent);flex:none}
+.submit{font:inherit;font-weight:700;padding:14px;border:0;border-radius:8px;
+  background:var(--accent);color:var(--accent-ink);cursor:pointer}
+.submit:disabled{opacity:.6;cursor:wait}
+.notice{margin:0;padding:12px 14px;border-radius:8px;background:var(--okbg);color:var(--ok);font-weight:500}
+.notice[hidden]{display:none}
+.notice.bad{background:transparent;border:1.5px solid var(--err);color:var(--err)}
+.reset{background:none;border:0;color:var(--muted);font:inherit;font-size:.85rem;text-decoration:underline;cursor:pointer;justify-self:start;padding:0}
+@media (min-width:760px){
+  .wrap{grid-template-columns:5fr 6fr}
+  .side{padding:40px 32px}
+  form{padding:40px 36px}
+}
+</style>
+</head>
+<body>
+<main class="wrap">
+  <section class="side">
+    <h1>Tạo tài khoản mới</h1>
+    <p>Mật khẩu của bạn cần đáp ứng các điều kiện sau:</p>
+    <ul class="rules" id="rules" aria-live="polite">
+      <li data-rule="len">Ít nhất 8 ký tự</li>
+      <li data-rule="upper">Có chữ hoa (A–Z)</li>
+      <li data-rule="lower">Có chữ thường (a–z)</li>
+      <li data-rule="digit">Có chữ số (0–9)</li>
+    </ul>
+  </section>
+
+  <form id="signup" novalidate>
+    <div class="field" data-field="name">
+      <label for="name">Họ và tên</label>
+      <input id="name" name="name" type="text" autocomplete="name">
+      <p class="error" id="name-err" role="alert"></p>
+    </div>
+    <div class="field" data-field="email">
+      <label for="email">Email</label>
+      <input id="email" name="email" type="email" autocomplete="email" inputmode="email">
+      <p class="error" id="email-err" role="alert"></p>
+    </div>
+    <div class="field" data-field="password">
+      <label for="password">Mật khẩu</label>
+      <div class="pw">
+        <input id="password" name="password" type="password" autocomplete="new-password">
+        <button type="button" id="toggle" aria-pressed="false">Hiện</button>
+      </div>
+      <p class="error" id="password-err" role="alert"></p>
+    </div>
+    <div class="field" data-field="terms">
+      <label class="check"><input id="terms" type="checkbox"><span>Tôi đồng ý với điều khoản sử dụng</span></label>
+      <p class="error" id="terms-err" role="alert"></p>
+    </div>
+    <button class="submit" id="submit" type="submit">Tạo tài khoản</button>
+    <p class="notice" id="notice" hidden role="status"></p>
+    <button class="reset" id="reset" type="button">Xóa dữ liệu đã lưu trên trình duyệt này</button>
+  </form>
+</main>
+
+<script>
+(function () {
+  "use strict";
+  var KEY = "demo_users";
+  var form = document.getElementById("signup");
+  var $ = function (id) { return document.getElementById(id); };
+  var EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+  // ---------- Kiểm tra dữ liệu ----------
+  function pwChecks(p) {
+    return { len: p.length >= 8, upper: /[A-Z]/.test(p), lower: /[a-z]/.test(p), digit: /\d/.test(p) };
+  }
+  function validate(v) {
+    var e = {};
+    if (v.name.trim().length < 2) e.name = "Vui lòng nhập họ tên (ít nhất 2 ký tự).";
+    if (!EMAIL_RE.test(v.email.trim())) e.email = "Email chưa hợp lệ, ví dụ: ten@example.com.";
+    var c = pwChecks(v.password);
+    if (!(c.len && c.upper && c.lower && c.digit)) e.password = "Mật khẩu chưa đáp ứng đủ các điều kiện bên trái.";
+    if (!v.terms) e.terms = "Bạn cần đồng ý điều khoản để tiếp tục.";
+    return e;
+  }
+  function showErrors(errs) {
+    ["name", "email", "password", "terms"].forEach(function (k) {
+      $(k + "-err").textContent = errs[k] || "";
+      form.querySelector('[data-field="' + k + '"]').classList.toggle("invalid", !!errs[k]);
+    });
+  }
+  function values() {
+    return { name: $("name").value, email: $("email").value, password: $("password").value, terms: $("terms").checked };
+  }
+
+  // Checklist mật khẩu cập nhật theo từng lần gõ
+  $("password").addEventListener("input", function () {
+    var c = pwChecks(this.value);
+    document.querySelectorAll("#rules li").forEach(function (li) {
+      li.classList.toggle("ok", c[li.dataset.rule]);
+    });
+  });
+  $("toggle").addEventListener("click", function () {
+    var show = $("password").type === "password";
+    $("password").type = show ? "text" : "password";
+    this.textContent = show ? "Ẩn" : "Hiện";
+    this.setAttribute("aria-pressed", String(show));
+  });
+
+  // ---------- Băm mật khẩu (PBKDF2 + salt ngẫu nhiên) ----------
+  function toHex(buf) {
+    return Array.prototype.map.call(new Uint8Array(buf), function (b) { return b.toString(16).padStart(2, "0"); }).join("");
+  }
+  async function hashPassword(password) {
+    var salt = crypto.getRandomValues(new Uint8Array(16));
+    var key = await crypto.subtle.importKey("raw", new TextEncoder().encode(password), "PBKDF2", false, ["deriveBits"]);
+    var bits = await crypto.subtle.deriveBits({ name: "PBKDF2", salt: salt, iterations: 210000, hash: "SHA-256" }, key, 256);
+    return { salt: toHex(salt), hash: toHex(bits), iter: 210000, algo: "PBKDF2-SHA256" };
+  }
+
+  // ---------- LocalStorage (luôn bọc try/catch) ----------
+  function loadUsers() {
+    try { var u = JSON.parse(localStorage.getItem(KEY) || "[]"); return Array.isArray(u) ? u : []; }
+    catch (e) { return []; }
+  }
+  function saveUsers(list) {
+    try { localStorage.setItem(KEY, JSON.stringify(list)); return true; }
+    catch (e) { return false; }
+  }
+
+  function notice(msg, bad) {
+    var n = $("notice");
+    n.textContent = msg; n.hidden = false; n.classList.toggle("bad", !!bad);
+  }
+
+  // ---------- Xử lý submit ----------
+  form.addEventListener("submit", async function (ev) {
+    ev.preventDefault();                       // 1. chặn tải lại trang
+    $("notice").hidden = true;
+    var v = values();
+    var errs = validate(v);                    // 2. validate toàn bộ
+    showErrors(errs);
+    var first = Object.keys(errs)[0];
+    if (first) {                               // 3. dừng và đưa focus về lỗi đầu tiên
+      (first === "terms" ? $("terms") : $(first)).focus();
+      return;
+    }
+    var btn = $("submit"); btn.disabled = true;
+    try {
+      if (!(window.crypto && crypto.subtle)) throw new Error("nocrypto");
+      var users = loadUsers();
+      var email = v.email.trim().toLowerCase();
+      if (users.some(function (u) { return u.email === email; })) {
+        showErrors({ email: "Email này đã được đăng ký trên trình duyệt." });
+        $("email").focus(); return;
+      }
+      var cred = await hashPassword(v.password);   // 4. băm trước khi lưu
+      users.push({
+        name: v.name.trim(), email: email,
+        password: cred,                            // chỉ lưu salt + hash, không lưu mật khẩu gốc
+        acceptedTerms: true, createdAt: new Date().toISOString()
+      });
+      if (!saveUsers(users)) throw new Error("nostorage");
+      form.reset();                                // 5. xóa mật khẩu khỏi ô nhập
+      document.querySelectorAll("#rules li").forEach(function (li) { li.classList.remove("ok"); });
+      notice("Đăng ký thành công! Chào " + v.name.trim() + ".");
+    } catch (err) {
+      notice(err.message === "nostorage"
+        ? "Không thể lưu dữ liệu: trình duyệt đang chặn LocalStorage."
+        : "Trình duyệt này không hỗ trợ mã hóa an toàn (cần HTTPS).", true);
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  // Xóa lỗi của từng trường ngay khi người dùng sửa
+  form.addEventListener("input", function (ev) {
+    var f = ev.target.closest(".field");
+    if (f) { f.classList.remove("invalid"); f.querySelector(".error").textContent = ""; }
+  });
+
+  $("reset").addEventListener("click", function () {
+    try { localStorage.removeItem(KEY); } catch (e) {}
+    notice("Đã xóa dữ liệu đăng ký trên trình duyệt này.");
+  });
+})();
+</script>
+</body>
+</html>
